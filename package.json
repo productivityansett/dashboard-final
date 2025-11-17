@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.29.1",
     "@google/generative-ai": "^0.21.0",
     "markdown-it": "^14.1.0",
     "react": "^18.2.0",

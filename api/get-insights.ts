@@ -1,63 +1,48 @@
-import { GoogleGenerativeAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ProductivityLog } from "../types";
 
-export const config = {
-  runtime: "edge",
-};
+// export const config = {
+//   runtime: "edge",
+// };
 
 export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method Not Allowed" }),
-      {
-        status: 405,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({
-        error: "API Key Missing",
-        details: "Set GEMINI_API_KEY in your Vercel environment variables.",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   try {
     const data: ProductivityLog[] = await request.json();
     
-    // This is the correct way to instantiate using the SDK:
+    // Correct SDK initialization
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-    const simplifiedData = data.slice(0, 50).map((item) => ({
-      employeeName: item.employeeName,
-      department: item.department,
-      taskCategory: item.taskCategory,
-      taskStatus: item.taskStatus,
-      hours: item.hours,
-      productivityRating: item.productivityRating,
-      blockers: item.blockers || "None",
-    }));
+    // Generate your prompt based on the data
+    const prompt = `Analyze the following productivity logs and provide insights:
+    
+${JSON.stringify(data, null, 2)}
 
-    const prompt = `
-      You are a senior business analyst and HR strategist reviewing weekly productivity logs.
-      Analyze the data and produce actionable insights:
-
-      Data:
-      ${JSON.stringify(simplifiedData, null, 2)}
-    `;
+Please provide:
+1. Key productivity patterns
+2. Time management insights
+3. Recommendations for improvement
+4. Notable trends`;
 
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const response = await result.response;
+    const text = response.text();
 
     return new Response(JSON.stringify({ insights: text }), {
       status: 200,
@@ -65,15 +50,13 @@ export default async function handler(request: Request): Promise<Response> {
     });
 
   } catch (error: any) {
-    return new Response(
-      JSON.stringify({
-        error: "Failed to generate insights",
-        details: error.message ?? String(error),
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    console.error('Error generating insights:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Failed to generate insights',
+      details: error.message 
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
