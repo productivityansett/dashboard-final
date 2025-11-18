@@ -27,3 +27,6 @@ node_moduletouch .gitignore
    *.log
    npm-debug.log*
    yarn-debug.log*
+
+# Local Netlify folder
+.netlify

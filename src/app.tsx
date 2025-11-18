@@ -156,60 +156,27 @@ const StorageService = {
 
 const AIService = {
   async generateInsights(logs: ProductivityLog[]): Promise<string> {
-    const simplifiedData = logs.slice(0, 100).map(({ employeeName, department, taskCategory, taskStatus, hours, productivityRating, blockers }) => ({
-      employeeName, department, taskCategory, taskStatus, hours, productivityRating, blockers: blockers || 'None'
-    }));
-
-    const prompt = `You are a senior business analyst and HR strategist for AIS company. You're reviewing productivity logs to provide actionable business insights.
-
-Analyze these ${logs.length} productivity logs and provide a comprehensive report in markdown format with:
-
-1. **Executive Summary** - High-level overview of team performance this period
-2. **Productivity Trends** - Key patterns in task completion, hours logged, and efficiency
-3. **Blocker Analysis** - Most common obstacles preventing productivity and their impact
-4. **Department Performance** - Compare departments, identify leaders and those needing support
-5. **Employee Insights** - Recognition of high performers and identification of employees needing assistance
-6. **Business Development Recommendations** - 3-4 specific, actionable strategies to:
-   - Improve operational efficiency
-   - Reduce blockers and delays
-   - Optimize resource allocation
-   - Boost employee productivity and morale
-   - Drive business growth
-
-Be specific with numbers, percentages, and concrete examples from the data. Focus on actionable recommendations that management can implement immediately.
-
-Data:
-${JSON.stringify(simplifiedData, null, 2)}`;
-
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Call our Netlify function
+      const response = await fetch('/.netlify/functions/generateInsights', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'x-api-key': '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',  // ← Make sure this is your actual key
-          'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2500,
-          messages: [{ role: 'user', content: prompt }],
-        })
+        body: JSON.stringify({ logs })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`API Error: ${errorData.error?.message || 'Unknown error'}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to generate insights');
       }
 
       const data = await response.json();
-      if (data.content && data.content[0] && data.content[0].text) {
-        return data.content[0].text;
-      }
-      
-      throw new Error('Invalid response from AI service');
+      return data.insights;
+
     } catch (error) {
       console.error('AI Service Error:', error);
-      throw new Error(error instanceof Error ? error.message : 'Failed to generate AI insights. Please check your API key and internet connection.');
+      throw new Error(error instanceof Error ? error.message : 'Failed to generate insights. Please try again.');
     }
   }
 };
